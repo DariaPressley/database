@@ -1,11 +1,6 @@
-const express = require('express');
 const mysql = require('mysql2');
+const inquirer = require('inquirer');
 
-const PORT = process.env.PORT || 3001;
-const app = express();
-
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
 
 const db = mysql.createConnection(
   {
@@ -17,104 +12,72 @@ const db = mysql.createConnection(
   console.log(`Connected to the employee_db database.`)
 );
 
+const createRole = async () => {
+  const [department] = await db.promise().query("SELECT id as value, name as name FROM department")
+  const response = await inquirer.prompt ([
+    {
+      type: 'input',
+      name: 'title',
+      message: 'what is the title?',
+    },
+    {
+      type: 'input',
+      name: 'salary',
+      message: 'what is the salary?',
+    },
+    {
+      type: 'list',
+      name: 'department_id',
+      message: 'what is the department',
+      choices: department
+    }
+  ])
+  await db.promise().query("INSERT INTO role set ?", response);
+  console.log ('role added');
+  init ();
+}
 
-// app.post('/api/new-movie', ({ body }, res) => {
-//   const sql = `INSERT INTO movies (movie_name)
-//     VALUES (?)`;
-//   const params = [body.movie_name];
-  
-//   db.query(sql, params, (err, result) => {
-//     if (err) {
-//       res.status(400).json({ error: err.message });
-//       return;
-//     }
-//     res.json({
-//       message: 'success',
-//       data: body
-//     });
-//   });
-// });
+const init = async () => {
+  const {homepage} = await inquirer
+    .prompt([
+      {
+        type: 'list',
+        name: 'homepage',
+        message: 'What would you like to do?',
+        choices: ['view all departments', 'view all roles', 'view all employees', 'add a department', 'add a role', 'add an employee', 'update an employee role'],
+      },
 
+    ])
+    switch (homepage) {
+      case 'view all departments':
+        //viewAllDept function here
+        break; 
+      case 'view all employees':
+        viewAllEmployees ()
+        break; 
+      case 'add a department':
+        addDepartment ()
+        break; 
+    }
+}
 
-// app.get('/api/movies', (req, res) => {
-//   const sql = `SELECT id, movie_name AS title FROM movies`;
-  
-//   db.query(sql, (err, rows) => {
-//     if (err) {
-//       res.status(500).json({ error: err.message });
-//        return;
-//     }
-//     res.json({
-//       message: 'success',
-//       data: rows
-//     });
-//   });
-// });
+const viewAllEmployees = async () => {
+  const [data] = await db.promise().query("SELECT * FROM employee")
+  console.table(data)
+  init ()
+}
 
+const addDepartment = async () => {
+  const {name} = await inquirer.prompt ([
+    {
+      type: 'input',
+      name: 'name',
+      message: 'Name of new department'
+    }
+  ])
+  const [data] = await db.promise ().query ("INSERT INTO department set name = ?", name)
+  console.log ('department added')
+  init ()
+}
 
-// app.delete('/api/movie/:id', (req, res) => {
-//   const sql = `DELETE FROM movies WHERE id = ?`;
-//   const params = [req.params.id];
-  
-//   db.query(sql, params, (err, result) => {
-//     if (err) {
-//       res.statusMessage(400).json({ error: res.message });
-//     } else if (!result.affectedRows) {
-//       res.json({
-//       message: 'Movie not found'
-//       });
-//     } else {
-//       res.json({
-//         message: 'deleted',
-//         changes: result.affectedRows,
-//         id: req.params.id
-//       });
-//     }
-//   });
-// });
-
-// // Read list of all reviews and associated movie name using LEFT JOIN
-// app.get('/api/movie-reviews', (req, res) => {
-//   const sql = `SELECT movies.movie_name AS movie, reviews.review FROM reviews LEFT JOIN movies ON reviews.movie_id = movies.id ORDER BY movies.movie_name;`;
-//   db.query(sql, (err, rows) => {
-//     if (err) {
-//       res.status(500).json({ error: err.message });
-//       return;
-//     }
-//     res.json({
-//       message: 'success',
-//       data: rows
-//     });
-//   });
-// });
-
-// // BONUS: Update review name
-// app.put('/api/review/:id', (req, res) => {
-//   const sql = `UPDATE reviews SET review = ? WHERE id = ?`;
-//   const params = [req.body.review, req.params.id];
-
-//   db.query(sql, params, (err, result) => {
-//     if (err) {
-//       res.status(400).json({ error: err.message });
-//     } else if (!result.affectedRows) {
-//       res.json({
-//         message: 'Movie not found'
-//       });
-//     } else {
-//       res.json({
-//         message: 'success',
-//         data: req.body,
-//         changes: result.affectedRows
-//       });
-//     }
-//   });
-// });
-
-// // Default response for any other request (Not Found)
-// app.use((req, res) => {
-//   res.status(404).end();
-// });
-
-// app.listen(PORT, () => {
-//   console.log(`Server running on port ${PORT}`);
-// });
+init ()
